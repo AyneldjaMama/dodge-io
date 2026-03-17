@@ -26,7 +26,6 @@ import { useGame } from "@/contexts/GameContext";
 import { getGameHTML } from "@/lib/game-html";
 import GameWebView, { GameWebViewRef } from "@/components/GameWebView";
 import { useRewardedAd } from "@/lib/use-rewarded-ad";
-import { useInterstitialAd } from "@/lib/use-interstitial-ad";
 import { getDeviceId, getDisplayName } from "@/lib/device-id";
 import { apiRequest, queryClient } from "@/lib/query-client";
 
@@ -57,7 +56,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const [currentScore, setCurrentScore] = useState(0);
   const [countdown, setCountdown] = useState(5);
   const { adAvailable, adLoading, showAd } = useRewardedAd();
-  const { maybeShowInterstitial } = useInterstitialAd();
+
   const continueUsedRef = useRef(false);
   const savedScoreRef = useRef(0);
   const savedTimeRef = useRef(0);
@@ -199,10 +198,9 @@ export default function GameScreen({ mode }: GameScreenProps) {
     gameRef.current?.postMessage(JSON.stringify({ type: "start" }));
   }, []);
 
-  const handleRetry = useCallback(async () => {
-    await maybeShowInterstitial();
+  const handleRetry = useCallback(() => {
     startGame();
-  }, [startGame, maybeShowInterstitial]);
+  }, [startGame]);
 
   const handleBack = useCallback(() => {
     router.back();
