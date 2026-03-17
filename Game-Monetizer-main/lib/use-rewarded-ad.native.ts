@@ -34,12 +34,23 @@ export function useRewardedAd() {
     unsubscribersRef.current = [];
   }, []);
 
+  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const loadAd = useCallback(() => {
     if (!canShowAds) return;
 
     cleanupListeners();
+    if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
     setAdLoaded(false);
     setAdLoading(true);
+
+    // Safety timeout — if the ad SDK never responds, stop showing "LOADING"
+    loadTimeoutRef.current = setTimeout(() => {
+      setAdLoading(false);
+      setAdLoaded(false);
+      console.warn("[RewardedAd] Load timed out after 10s, retrying...");
+      setTimeout(loadAd, 3000);
+    }, 10000);
 
     const ad = RewardedAdClass.createForAdRequest(ADMOB_REWARDED_AD_UNIT_ID, {
       requestNonPersonalizedAdsOnly: true,
@@ -49,6 +60,7 @@ export function useRewardedAd() {
 
     unsubs.push(
       ad.addAdEventListener(AdEventTypeEnum.LOADED, () => {
+        if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
         setAdLoaded(true);
         setAdLoading(false);
       })
@@ -72,6 +84,7 @@ export function useRewardedAd() {
 
     unsubs.push(
       ad.addAdEventListener(AdEventTypeEnum.ERROR, (error: any) => {
+        if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
         console.warn("[RewardedAd] Failed to load:", error?.message || error?.code || error);
         setAdLoading(false);
         setAdLoaded(false);
@@ -95,6 +108,7 @@ export function useRewardedAd() {
 
     return () => {
       cleanupListeners();
+      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
     };
   }, [loadAd, cleanupListeners]);
 
