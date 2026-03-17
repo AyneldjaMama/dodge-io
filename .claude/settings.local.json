@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(xargs grep:*)",
+      "Bash(gh auth:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(rm -rf \"C:/projects/Game-Monetizer-dodge-main/Game-Monetizer-main/.git\")"
+    ]
+  }
+}
