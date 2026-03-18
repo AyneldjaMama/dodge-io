@@ -26,6 +26,7 @@ import { useGame } from "@/contexts/GameContext";
 import { getGameHTML } from "@/lib/game-html";
 import GameWebView, { GameWebViewRef } from "@/components/GameWebView";
 import { useRewardedAd } from "@/lib/use-rewarded-ad";
+import SimulatedAdOverlay from "@/components/SimulatedAdOverlay";
 import { getDeviceId, getDisplayName } from "@/lib/device-id";
 import { apiRequest, queryClient } from "@/lib/query-client";
 
@@ -55,8 +56,10 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const [isNewHigh, setIsNewHigh] = useState(false);
   const [currentScore, setCurrentScore] = useState(0);
   const [countdown, setCountdown] = useState(5);
-  const { adAvailable, adLoading, showAd } = useRewardedAd();
+  const { adAvailable } = useRewardedAd();
 
+  const [showingSimAd, setShowingSimAd] = useState(false);
+  const simAdRewardRef = useRef<(() => void) | null>(null);
   const continueUsedRef = useRef(false);
   const savedScoreRef = useRef(0);
   const savedTimeRef = useRef(0);
@@ -206,22 +209,26 @@ export default function GameScreen({ mode }: GameScreenProps) {
     router.back();
   }, []);
 
-  const handleWatchAd = useCallback(async () => {
+  const handleWatchAd = useCallback(() => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     continueUsedRef.current = true;
 
-    const shown = await showAd(() => {
+    // Store the reward callback so the overlay can trigger it on close
+    simAdRewardRef.current = () => {
       gameRef.current?.postMessage(JSON.stringify({ type: "respawn" }));
-    });
+      recordAdWatched();
+    };
+    setShowingSimAd(true);
+  }, [recordAdWatched]);
 
-    if (shown) {
-      await recordAdWatched();
-    } else {
-      // Ad wasn't available — go to dead screen
-      showDeadScreen(savedScoreRef.current, savedTimeRef.current);
+  const handleSimAdComplete = useCallback(() => {
+    setShowingSimAd(false);
+    if (simAdRewardRef.current) {
+      simAdRewardRef.current();
+      simAdRewardRef.current = null;
     }
-  }, [recordAdWatched, showAd, showDeadScreen]);
+  }, []);
 
   const handleNoThanks = useCallback(() => {
     showDeadScreen(savedScoreRef.current, savedTimeRef.current);
@@ -269,7 +276,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
       )}
 
       {/* ===== Continue screen ===== */}
-      {gameState === "continue" && (
+      {gameState === "continue" && !showingSimAd && (
         <Animated.View
           entering={FadeIn.duration(300)}
           style={[styles.continueOverlay, { paddingTop: topPad + 40, paddingBottom: bottomPad + 20 }]}
@@ -279,20 +286,15 @@ export default function GameScreen({ mode }: GameScreenProps) {
           <Text style={styles.continueScore}>{savedScoreRef.current} pts</Text>
 
           <Pressable
-            onPress={adAvailable || adLoading ? handleWatchAd : undefined}
-            disabled={!adAvailable && !adLoading}
+            onPress={handleWatchAd}
             style={({ pressed }) => [
               styles.watchAdBtn,
-              !adAvailable && !adLoading && { opacity: 0.45 },
-              adLoading && !adAvailable && { opacity: 0.7 },
-              pressed && (adAvailable || adLoading) && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
             ]}
             testID="watch-ad-btn"
           >
             <MaterialCommunityIcons name="play-circle-outline" size={24} color={Colors.background} />
-            <Text style={styles.watchAdBtnText}>
-              {adAvailable ? "WATCH AD TO CONTINUE" : adLoading ? "WATCH AD TO CONTINUE" : "AD UNAVAILABLE"}
-            </Text>
+            <Text style={styles.watchAdBtnText}>WATCH AD TO CONTINUE</Text>
           </Pressable>
 
           <Pressable
@@ -303,6 +305,9 @@ export default function GameScreen({ mode }: GameScreenProps) {
           </Pressable>
         </Animated.View>
       )}
+
+      {/* ===== Simulated ad overlay ===== */}
+      <SimulatedAdOverlay visible={showingSimAd} onComplete={handleSimAdComplete} />
 
       {/* ===== Death screen ===== */}
       {gameState === "dead" && (

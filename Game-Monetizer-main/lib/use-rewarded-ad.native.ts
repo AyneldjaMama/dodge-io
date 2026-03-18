@@ -137,15 +137,23 @@ export function useRewardedAd() {
         });
       }
 
-      // Native but ad not loaded — don't give free reward
-      console.warn("[RewardedAd] Ad not loaded, cannot show");
-      return Promise.resolve(false);
+      // Native but ad not loaded — fall back to simulated ad so
+      // the continue flow still works (needed for AdMob review builds)
+      console.warn("[RewardedAd] Ad not loaded, using simulated ad");
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          onRewarded();
+          resolve(true);
+        }, 5000);
+      });
     },
     [adLoaded]
   );
 
   return {
-    adAvailable: canShowAds ? adLoaded : true,
+    // Always report available — if native ad isn't loaded we fall back
+    // to a simulated ad so the continue flow always works.
+    adAvailable: canShowAds ? adLoaded || !adLoading : true,
     adLoading,
     showAd,
   };
