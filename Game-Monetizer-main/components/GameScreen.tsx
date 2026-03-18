@@ -56,7 +56,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const [isNewHigh, setIsNewHigh] = useState(false);
   const [currentScore, setCurrentScore] = useState(0);
   const [countdown, setCountdown] = useState(5);
-  const { adAvailable } = useRewardedAd();
+  const { adAvailable, showAd } = useRewardedAd();
 
   const [showingSimAd, setShowingSimAd] = useState(false);
   const simAdRewardRef = useRef<(() => void) | null>(null);
@@ -209,18 +209,25 @@ export default function GameScreen({ mode }: GameScreenProps) {
     router.back();
   }, []);
 
-  const handleWatchAd = useCallback(() => {
+  const handleWatchAd = useCallback(async () => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     continueUsedRef.current = true;
 
-    // Store the reward callback so the overlay can trigger it on close
-    simAdRewardRef.current = () => {
+    const onRewarded = () => {
       gameRef.current?.postMessage(JSON.stringify({ type: "respawn" }));
       recordAdWatched();
     };
-    setShowingSimAd(true);
-  }, [recordAdWatched]);
+
+    // Try real Google test/video ads first
+    const shown = await showAd(onRewarded);
+
+    if (!shown) {
+      // Real ad unavailable — fall back to simulated overlay
+      simAdRewardRef.current = onRewarded;
+      setShowingSimAd(true);
+    }
+  }, [recordAdWatched, showAd]);
 
   const handleSimAdComplete = useCallback(() => {
     setShowingSimAd(false);

@@ -7,7 +7,14 @@
       "Bash(gh auth:*)",
       "Bash(git add:*)",
       "Bash(git rm:*)",
-      "Bash(rm -rf \"C:/projects/Game-Monetizer-dodge-main/Game-Monetizer-main/.git\")"
+      "Bash(rm -rf \"C:/projects/Game-Monetizer-dodge-main/Game-Monetizer-main/.git\")",
+      "Bash(git commit:*)",
+      "Bash(gh repo:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(node scripts/sync-game-html.js)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:playvibegames.app)"
     ]
   }
 }

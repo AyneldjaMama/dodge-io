@@ -44,13 +44,13 @@ export function useRewardedAd() {
     setAdLoaded(false);
     setAdLoading(true);
 
-    // Safety timeout — if the ad SDK never responds, stop showing "LOADING"
+    // Safety timeout — if the ad SDK never responds, retry
     loadTimeoutRef.current = setTimeout(() => {
       setAdLoading(false);
       setAdLoaded(false);
-      console.warn("[RewardedAd] Load timed out after 10s, retrying...");
-      setTimeout(loadAd, 3000);
-    }, 10000);
+      console.warn("[RewardedAd] Load timed out after 15s, retrying...");
+      setTimeout(loadAd, 2000);
+    }, 15000);
 
     const ad = RewardedAdClass.createForAdRequest(ADMOB_REWARDED_AD_UNIT_ID, {
       requestNonPersonalizedAdsOnly: true,
@@ -61,6 +61,7 @@ export function useRewardedAd() {
     unsubs.push(
       ad.addAdEventListener(AdEventTypeEnum.LOADED, () => {
         if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
+        console.log("[RewardedAd] Test ad loaded successfully");
         setAdLoaded(true);
         setAdLoading(false);
       })
@@ -88,7 +89,8 @@ export function useRewardedAd() {
         console.warn("[RewardedAd] Failed to load:", error?.message || error?.code || error);
         setAdLoading(false);
         setAdLoaded(false);
-        setTimeout(loadAd, 5000);
+        // Retry after a short delay
+        setTimeout(loadAd, 3000);
       })
     );
 
@@ -103,8 +105,13 @@ export function useRewardedAd() {
 
     MobileAdsModule()
       .initialize()
-      .then(() => loadAd())
-      .catch(() => {});
+      .then(() => {
+        console.log("[RewardedAd] SDK initialized, loading test ad...");
+        loadAd();
+      })
+      .catch((e: any) => {
+        console.warn("[RewardedAd] SDK init failed:", e);
+      });
 
     return () => {
       cleanupListeners();
@@ -114,46 +121,27 @@ export function useRewardedAd() {
 
   const showAd = useCallback(
     (onRewarded: () => void): Promise<boolean> => {
+      // SDK available and ad loaded — show the real test video ad
       if (canShowAds && adLoaded && adRef.current) {
         rewardCallbackRef.current = onRewarded;
         try {
           adRef.current.show();
+          return Promise.resolve(true);
         } catch (e) {
           console.warn("[RewardedAd] Failed to show:", e);
-          // Ad failed to show — give reward anyway so user isn't stuck
           rewardCallbackRef.current = null;
-          onRewarded();
+          // Fall through to return false so GameScreen shows simulated overlay
         }
-        return Promise.resolve(true);
       }
 
-      if (!canShowAds) {
-        // Web/Expo Go fallback — simulate ad
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            onRewarded();
-            resolve(true);
-          }, 1500);
-        });
-      }
-
-      // Native but ad not loaded — fall back to simulated ad so
-      // the continue flow still works (needed for AdMob review builds)
-      console.warn("[RewardedAd] Ad not loaded, using simulated ad");
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          onRewarded();
-          resolve(true);
-        }, 5000);
-      });
+      // Ad not ready — return false so GameScreen can show simulated overlay
+      return Promise.resolve(false);
     },
     [adLoaded]
   );
 
   return {
-    // Always report available — if native ad isn't loaded we fall back
-    // to a simulated ad so the continue flow always works.
-    adAvailable: canShowAds ? adLoaded || !adLoading : true,
+    adAvailable: canShowAds ? adLoaded : false,
     adLoading,
     showAd,
   };

@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dodge-web",
+      "name": "dodge-expo-web",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["serve.js"],
-      "port": 3000
+      "runtimeArgs": ["start-expo-web.js"],
+      "port": 8081
     }
   ]
 }
