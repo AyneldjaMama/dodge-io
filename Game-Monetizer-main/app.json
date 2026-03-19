@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "io.dodge.game",
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
         "backgroundColor": "#0a0a1a",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
