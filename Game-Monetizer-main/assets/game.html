@@ -359,22 +359,20 @@ canvas.addEventListener("touchstart", function(e) {
 canvas.addEventListener("mousemove", function(e) { handleMove(e.clientX, e.clientY); });
 
 // Listen for messages from React Native
-document.addEventListener('message', function(e) {
+function handleNativeMessage(e) {
   try {
     const msg = JSON.parse(e.data);
     if (msg.type === 'start') startGame();
     if (msg.type === 'respawn') respawnPlayer();
+    if (msg.type === 'pause' && running) {
+      running = false;
+      postMsg('playerDied', { score: Math.floor(score), time: Math.floor(time / 60) });
+    }
     if (msg.type === 'endGame') postMsg('gameOver', { score: Math.floor(score), time: Math.floor(time / 60), isDaily: !!DAILY_SEED });
   } catch(err) {}
-});
-window.addEventListener('message', function(e) {
-  try {
-    const msg = JSON.parse(e.data);
-    if (msg.type === 'start') startGame();
-    if (msg.type === 'respawn') respawnPlayer();
-    if (msg.type === 'endGame') postMsg('gameOver', { score: Math.floor(score), time: Math.floor(time / 60), isDaily: !!DAILY_SEED });
-  } catch(err) {}
-});
+}
+document.addEventListener('message', handleNativeMessage);
+window.addEventListener('message', handleNativeMessage);
 
 // ============ GAME LOOP ============
 var _lastFrameMs = 0;

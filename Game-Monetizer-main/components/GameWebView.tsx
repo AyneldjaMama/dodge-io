@@ -1,5 +1,5 @@
-import { useRef, useMemo, useImperativeHandle, forwardRef, useEffect } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { useRef, useMemo, useImperativeHandle, forwardRef, useEffect, useState } from "react";
+import { Platform, StyleSheet, View, Text } from "react-native";
 import Colors from "@/constants/colors";
 
 export interface GameWebViewRef {
@@ -89,12 +89,18 @@ const NativeWebView = forwardRef<GameWebViewRef, GameWebViewProps>(
   ({ html, onMessage, style }, ref) => {
     const WebView = require("react-native-webview").default;
     const webViewRef = useRef<any>(null);
+    const [crashed, setCrashed] = useState(false);
 
     useImperativeHandle(ref, () => ({
       postMessage: (msg: string) => {
         webViewRef.current?.postMessage(msg);
       },
     }));
+
+    if (crashed) {
+      // Re-render WebView after renderer process was killed
+      setCrashed(false);
+    }
 
     return (
       <WebView
@@ -110,6 +116,21 @@ const NativeWebView = forwardRef<GameWebViewRef, GameWebViewProps>(
         showsVerticalScrollIndicator={false}
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
+        onRenderProcessGone={() => {
+          // Android kills WebView renderer under memory pressure — recover instead of crashing
+          console.warn("[GameWebView] Renderer process gone, recovering...");
+          webViewRef.current = null;
+          setCrashed(true);
+        }}
+        onError={(syntheticEvent: any) => {
+          console.warn("[GameWebView] Error:", syntheticEvent.nativeEvent?.description);
+        }}
+        onContentProcessDidTerminate={() => {
+          // iOS equivalent of onRenderProcessGone
+          console.warn("[GameWebView] Content process terminated, recovering...");
+          webViewRef.current = null;
+          setCrashed(true);
+        }}
       />
     );
   }

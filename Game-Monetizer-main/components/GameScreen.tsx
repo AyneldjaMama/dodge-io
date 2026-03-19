@@ -11,6 +11,7 @@ import {
   Pressable,
   StyleSheet,
   Platform,
+  AppState,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -244,6 +245,17 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const scoreStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scoreScale.value }],
   }));
+
+  // Pause game when app goes to background (prevents Android crash on Activity destroy)
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background" || nextState === "inactive") {
+        gameRef.current?.postMessage(JSON.stringify({ type: "pause" }));
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // Auto-start game on mount
   useEffect(() => {

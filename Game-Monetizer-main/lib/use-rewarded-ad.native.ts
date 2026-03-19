@@ -28,6 +28,7 @@ export function useRewardedAd() {
   const unsubscribersRef = useRef<(() => void)[]>([]);
   const rewardCallbackRef = useRef<(() => void) | null>(null);
   const initialized = useRef(false);
+  const mountedRef = useRef(true);
 
   const cleanupListeners = useCallback(() => {
     unsubscribersRef.current.forEach((unsub) => unsub());
@@ -37,7 +38,7 @@ export function useRewardedAd() {
   const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAd = useCallback(() => {
-    if (!canShowAds) return;
+    if (!canShowAds || !mountedRef.current) return;
 
     cleanupListeners();
     if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
@@ -46,10 +47,11 @@ export function useRewardedAd() {
 
     // Safety timeout — if the ad SDK never responds, retry
     loadTimeoutRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
       setAdLoading(false);
       setAdLoaded(false);
       console.warn("[RewardedAd] Load timed out after 15s, retrying...");
-      setTimeout(loadAd, 2000);
+      setTimeout(() => { if (mountedRef.current) loadAd(); }, 2000);
     }, 15000);
 
     const ad = RewardedAdClass.createForAdRequest(ADMOB_REWARDED_AD_UNIT_ID, {
@@ -60,6 +62,7 @@ export function useRewardedAd() {
 
     unsubs.push(
       ad.addAdEventListener(AdEventTypeEnum.LOADED, () => {
+        if (!mountedRef.current) return;
         if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
         console.log("[RewardedAd] Test ad loaded successfully");
         setAdLoaded(true);
@@ -78,6 +81,7 @@ export function useRewardedAd() {
 
     unsubs.push(
       ad.addAdEventListener(AdEventTypeEnum.CLOSED, () => {
+        if (!mountedRef.current) return;
         setAdLoaded(false);
         loadAd();
       })
@@ -85,12 +89,13 @@ export function useRewardedAd() {
 
     unsubs.push(
       ad.addAdEventListener(AdEventTypeEnum.ERROR, (error: any) => {
+        if (!mountedRef.current) return;
         if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
         console.warn("[RewardedAd] Failed to load:", error?.message || error?.code || error);
         setAdLoading(false);
         setAdLoaded(false);
         // Retry after a short delay
-        setTimeout(loadAd, 3000);
+        setTimeout(() => { if (mountedRef.current) loadAd(); }, 3000);
       })
     );
 
@@ -100,12 +105,15 @@ export function useRewardedAd() {
   }, [cleanupListeners]);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     if (!canShowAds || initialized.current) return;
     initialized.current = true;
 
     MobileAdsModule()
       .initialize()
       .then(() => {
+        if (!mountedRef.current) return;
         console.log("[RewardedAd] SDK initialized, loading test ad...");
         loadAd();
       })
@@ -114,6 +122,7 @@ export function useRewardedAd() {
       });
 
     return () => {
+      mountedRef.current = false;
       cleanupListeners();
       if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
     };
