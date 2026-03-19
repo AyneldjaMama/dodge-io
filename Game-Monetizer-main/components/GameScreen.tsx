@@ -134,7 +134,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
         }
 
         if (msg.type === "nearMiss") {
-          recordNearMiss();
+          recordNearMiss(msg.count || 1);
           if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
 

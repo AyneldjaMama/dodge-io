@@ -19,7 +19,7 @@ interface GameContextValue {
   isLoaded: boolean;
   recordGame: (score: number, time: number) => Promise<void>;
   recordDailyGame: (score: number, time: number) => Promise<void>;
-  recordNearMiss: () => void;
+  recordNearMiss: (count?: number) => void;
   recordShieldUsed: () => void;
   recordAdWatched: () => Promise<void>;
   resetStats: () => Promise<void>;
@@ -105,10 +105,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [persistUpdate]
   );
 
-  const recordNearMiss = useCallback(() => {
+  const recordNearMiss = useCallback((count: number = 1) => {
     persistUpdate((prev) => ({
       ...prev,
-      totalNearMisses: prev.totalNearMisses + 1,
+      totalNearMisses: prev.totalNearMisses + count,
     }));
   }, [persistUpdate]);
 

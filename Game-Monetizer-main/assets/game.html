@@ -141,7 +141,7 @@ let touchX, touchY;
 let shieldActive, shieldTimer;
 let slowActive, slowTimer;
 let shrinkActive, shrinkTimer;
-let nearMissStreak, lastNearMiss;
+let nearMissStreak, lastNearMiss, pendingNearMisses;
 let comboText, comboTimer;
 let screenShake, flashTimer, iFrames;
 
@@ -165,9 +165,13 @@ function hexToRgb(hex) {
   };
 }
 
+var MAX_PARTICLES = 200;
 function spawnParticles(x, y, color, count, speed) {
   const c = hexToRgb(color);
-  for (let i = 0; i < count; i++) {
+  // Limit how many we actually add so the array stays bounded
+  var room = MAX_PARTICLES - particles.length;
+  var actual = Math.min(count, Math.max(room, 0));
+  for (let i = 0; i < actual; i++) {
     const angle = (Math.PI * 2 * i) / count + (rng() - 0.5) * 0.5;
     const spd = speed * (0.5 + rng());
     particles.push({
@@ -212,7 +216,7 @@ function spawnEnemy() {
   const base = { x, y, color: ENEMY_COLORS[type], type, age: 0 };
 
   if (type === "bullet") {
-    enemies.push({ ...base, vx, vy, radius: 5 + rng() * 4 });
+    enemies.push({ ...base, vx, vy, radius: 5 + rng() * 4, maxAge: 600 });
   } else if (type === "seeker") {
     enemies.push({ ...base, vx: vx * 0.3, vy: vy * 0.3, radius: 7, maxAge: 300 });
   } else if (type === "wave") {
@@ -299,7 +303,7 @@ function startGame() {
   shieldActive = false; shieldTimer = 0;
   slowActive = false; slowTimer = 0;
   shrinkActive = false; shrinkTimer = 0;
-  nearMissStreak = 0; lastNearMiss = 0;
+  nearMissStreak = 0; lastNearMiss = 0; pendingNearMisses = 0;
   comboText = ""; comboTimer = 0;
   screenShake = 0; flashTimer = 0; iFrames = 0;
   postMsg('gameStart');
@@ -428,9 +432,13 @@ function loop(now) {
   // Score
   score += (0.02 + difficulty * 0.005) * (nearMissStreak > 0 ? 1 + nearMissStreak * 0.3 : 1);
 
-  // Periodic score update
-  if (time % 30 === 0) {
+  // Periodic score update + batched near-miss flush
+  if (time % 60 === 0) {
     postMsg('scoreUpdate', { score: Math.floor(score), time: Math.floor(time / 60) });
+    if (pendingNearMisses > 0) {
+      postMsg('nearMiss', { streak: nearMissStreak, count: pendingNearMisses });
+      pendingNearMisses = 0;
+    }
   }
 
   // Timers
@@ -564,6 +572,9 @@ function loop(now) {
       return true;
     }
 
+    // Expire bullets (and any enemy with maxAge not handled above)
+    if (e.type === "bullet" && e.maxAge && e.age > e.maxAge) return false;
+
     e.x += e.vx * slow * speedMultiplier;
     e.y += e.vy * slow * speedMultiplier;
     return !(e.x < -100 || e.x > W+100 || e.y < -100 || e.y > PH+20);
@@ -624,7 +635,7 @@ function loop(now) {
           SFX.nearMiss();
           if (nearMissStreak > 1) SFX.combo(nearMissStreak);
           spawnParticles(player.x, player.y, NEON_GREEN, 5, 2);
-          postMsg('nearMiss', { streak: nearMissStreak });
+          pendingNearMisses += 1;
         }
       }
     }
@@ -680,8 +691,7 @@ function loop(now) {
 
     ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI*2);
     ctx.fillStyle = inv ? NEON_CYAN : NEON_GREEN;
-    ctx.shadowColor = inv ? NEON_CYAN : NEON_GREEN;
-    ctx.shadowBlur = 20; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fill();
 
     ctx.beginPath(); ctx.arc(player.x, player.y, player.radius*0.5, 0, Math.PI*2);
     ctx.fillStyle = "#fff"; ctx.fill();
@@ -691,8 +701,8 @@ function loop(now) {
   if (shieldActive) {
     ctx.beginPath(); ctx.arc(player.x, player.y, player.radius+8, 0, Math.PI*2);
     ctx.strokeStyle = "rgba(0,212,255," + (0.5+Math.sin(time*0.1)*0.3) + ")";
-    ctx.lineWidth = 2; ctx.shadowColor = NEON_CYAN; ctx.shadowBlur = 15;
-    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 
   // Enemies
@@ -731,8 +741,8 @@ function loop(now) {
     ctx.fillStyle = eg; ctx.fill();
 
     ctx.beginPath(); ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);
-    ctx.fillStyle = e.color; ctx.shadowColor = e.color;
-    ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = e.color;
+    ctx.fill();
 
     if (e.type === "seeker") {
       ctx.beginPath(); ctx.arc(e.x,e.y,e.radius+4,0,Math.PI*2);
@@ -777,8 +787,8 @@ function loop(now) {
     ctx.beginPath(); ctx.arc(p.x,p.y,p.radius*pulse,0,Math.PI*2);
     ctx.fillStyle = "rgba(0,212,255,"+(0.3*a)+")";
     ctx.strokeStyle = "rgba(0,212,255,"+(0.8*a)+")";
-    ctx.lineWidth = 2; ctx.shadowColor = NEON_CYAN; ctx.shadowBlur = 15;
-    ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
     ctx.fillStyle = "rgba(255,255,255,"+(0.9*a)+")";
     ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
