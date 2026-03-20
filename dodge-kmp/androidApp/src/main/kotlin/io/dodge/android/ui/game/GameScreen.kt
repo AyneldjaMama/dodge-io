@@ -54,6 +54,13 @@ fun GameScreen(
     }
 
     var surfaceView by remember { mutableStateOf<GameSurfaceView?>(null) }
+    var showingSimAd by remember { mutableStateOf(false) }
+
+    // Audio
+    val audioEngine = remember { io.dodge.android.audio.SynthAudioEngine() }
+    DisposableEffect(Unit) {
+        onDispose { audioEngine.shutdown() }
+    }
 
     // AdMob
     val adMobManager = remember {
@@ -124,6 +131,9 @@ fun GameScreen(
                 gameState = GameState.PLAYING
                 currentScore = 0
             }
+            is GameEvent.PlaySound -> {
+                audioEngine.play(event.sfx)
+            }
             else -> {}
         }
     }
@@ -189,27 +199,21 @@ fun GameScreen(
 
                     Button(
                         onClick = {
-                            // Show real ad, respawn on reward
-                            val adShown = adMobManager?.showAd {
-                                // onRewarded callback — runs on main thread
-                                continueUsed = true
-                                surfaceView?.sendRespawn()
-                                gameState = GameState.PLAYING
-                                scope.launch {
-                                    val s = statsRepo.loadStats()
-                                    statsRepo.saveStats(s.copy(totalAdsWatched = s.totalAdsWatched + 1))
-                                }
-                            } ?: false
-
-                            if (!adShown) {
-                                // No ad available — just respawn (same as simulated ad)
-                                continueUsed = true
-                                surfaceView?.sendRespawn()
-                                gameState = GameState.PLAYING
-                                scope.launch {
-                                    val s = statsRepo.loadStats()
-                                    statsRepo.saveStats(s.copy(totalAdsWatched = s.totalAdsWatched + 1))
-                                }
+                            if (AdMobManager.USE_REAL_ADS) {
+                                // Try real ad first, fall back to simulated
+                                val adShown = adMobManager?.showAd {
+                                    continueUsed = true
+                                    surfaceView?.sendRespawn()
+                                    gameState = GameState.PLAYING
+                                    scope.launch {
+                                        val s = statsRepo.loadStats()
+                                        statsRepo.saveStats(s.copy(totalAdsWatched = s.totalAdsWatched + 1))
+                                    }
+                                } ?: false
+                                if (!adShown) showingSimAd = true
+                            } else {
+                                // Testing mode — always show simulated ad
+                                showingSimAd = true
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonGreen),
@@ -350,6 +354,21 @@ fun GameScreen(
                 }
             }
         }
+
+        // Simulated ad overlay (fallback when real ad unavailable)
+        SimulatedAdOverlay(
+            visible = showingSimAd,
+            onComplete = {
+                showingSimAd = false
+                continueUsed = true
+                surfaceView?.sendRespawn()
+                gameState = GameState.PLAYING
+                scope.launch {
+                    val s = statsRepo.loadStats()
+                    statsRepo.saveStats(s.copy(totalAdsWatched = s.totalAdsWatched + 1))
+                }
+            }
+        )
     }
 }
 
