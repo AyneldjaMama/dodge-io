@@ -70,6 +70,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+    // AppCompat (required for theme)
+    implementation("androidx.appcompat:appcompat:1.7.0")
+
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.6.0")
 }
