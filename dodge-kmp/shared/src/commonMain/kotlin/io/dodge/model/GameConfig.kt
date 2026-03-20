@@ -6,7 +6,7 @@ object GameConfig {
     const val PLAYER_RADIUS_SHRUNK = 8f
     const val PLAYER_SPEED_FACTOR = 0.15f
     const val PLAYER_MAX_SPEED = 12f
-    const val TOUCH_OFFSET = 120f
+    const val TOUCH_OFFSET = 150f
     const val TRAIL_LENGTH = 20
 
     // Play area
