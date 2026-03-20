@@ -1,8 +1,0 @@
-node_modules
-.git
-.local
-/tmp
-attached_assets
-credentials
-*.log
-.cache

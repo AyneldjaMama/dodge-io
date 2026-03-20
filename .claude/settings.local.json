@@ -14,7 +14,17 @@
       "Bash(git push:*)",
       "Bash(node scripts/sync-game-html.js)",
       "Bash(npx tsc:*)",
-      "WebFetch(domain:playvibegames.app)"
+      "WebFetch(domain:playvibegames.app)",
+      "Bash(grep -r \"useFocusEffect\\\\|useAppState\\\\|AppState\\\\|useLifecycle\" /c/projects/Game-Monetizer-dodge-main/Game-Monetizer-main --include=*.tsx --include=*.ts --exclude-dir=node_modules)",
+      "Bash(find /c/projects/Game-Monetizer-dodge-main -type f -name *.html)",
+      "Bash(adb logcat:*)",
+      "Bash(adb devices:*)",
+      "Bash($LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe logcat:*)",
+      "Bash(ADB=\"C:\\\\Users\\\\seanf\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\")",
+      "Bash(\"$ADB\" logcat:*)",
+      "Bash(/c/Users/seanf/AppData/Local/Android/Sdk/platform-tools/adb.exe logcat:*)",
+      "Bash(/c/Users/seanf/AppData/Local/Android/Sdk/platform-tools/adb.exe devices:*)",
+      "Bash(/c/Users/seanf/AppData/Local/Android/Sdk/platform-tools/adb.exe -s R5CX12TCASR logcat -d)"
     ]
   }
 }
