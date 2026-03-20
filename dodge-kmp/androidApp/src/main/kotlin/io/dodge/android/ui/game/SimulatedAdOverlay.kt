@@ -1,33 +1,37 @@
 package io.dodge.android.ui.game
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.dodge.android.ui.theme.*
 import kotlinx.coroutines.delay
 
-private data class SampleAd(
-    val headline: String,
-    val body: String,
-    val url: String
+private data class FakeVideoAd(
+    val title: String,
+    val subtitle: String,
+    val ctaText: String,
+    val accentColor: Color
 )
 
-private val sampleAds = listOf(
-    SampleAd("Level Up Your Skills", "Download the #1 brain training app today", "braintrainer.example.com"),
-    SampleAd("Pizza Deals Near You", "50% off your first order with code DODGE", "pizzaplace.example.com"),
-    SampleAd("Learn to Code", "Start your coding journey — free for 7 days", "codeacademy.example.com"),
-    SampleAd("Fast Mobile Games", "Discover trending games this week", "gamestore.example.com"),
-    SampleAd("Music Unlimited", "Stream 100M+ songs. Try free for 30 days", "musicapp.example.com")
+private val fakeVideoAds = listOf(
+    FakeVideoAd("PUZZLE QUEST", "Download Free — 4.8★", "INSTALL NOW", Color(0xFF4CAF50)),
+    FakeVideoAd("BATTLE ARENA", "Join 10M+ Players", "PLAY FREE", Color(0xFFFF5722)),
+    FakeVideoAd("WORD MASTER", "Train Your Brain Daily", "GET IT FREE", Color(0xFF2196F3)),
+    FakeVideoAd("SPEED RACER", "New Season Available!", "DOWNLOAD", Color(0xFFFF9800)),
+    FakeVideoAd("CANDY BLAST", "#1 Puzzle Game 2026", "PLAY NOW", Color(0xFFE91E63))
 )
 
 @Composable
@@ -38,96 +42,177 @@ fun SimulatedAdOverlay(
 ) {
     if (!visible) return
 
-    val ad = remember { sampleAds.random() }
-    var countdown by remember { mutableIntStateOf(durationSeconds) }
-    var canClose by remember { mutableStateOf(false) }
+    val ad = remember { fakeVideoAds.random() }
+    var elapsedMs by remember { mutableIntStateOf(0) }
+    val totalMs = durationSeconds * 1000
+    val canClose = elapsedMs >= totalMs
+    val progress = (elapsedMs.toFloat() / totalMs).coerceIn(0f, 1f)
+    val remainingSeconds = ((totalMs - elapsedMs) / 1000) + 1
 
+    // Animate elapsed time
     LaunchedEffect(visible) {
-        countdown = durationSeconds
-        canClose = false
-        while (countdown > 0) {
-            delay(1000)
-            countdown -= 1
+        elapsedMs = 0
+        while (elapsedMs < totalMs) {
+            delay(50)
+            elapsedMs += 50
         }
-        canClose = true
     }
+
+    // Fake "animation" shimmer
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xF0000000))
+            .background(Color.Black)
     ) {
-        // Top bar
-        Row(
+        // Fake video content area
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF1A1A2E))
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .padding(bottom = 140.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Ad",
-                color = TextMuted,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+            // Dark gradient background simulating video
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF1A1A2E),
+                                ad.accentColor.copy(alpha = 0.15f),
+                                Color(0xFF1A1A2E)
+                            )
+                        )
+                    )
             )
-            if (canClose) {
-                Text(
-                    text = "✕ Close",
-                    color = NeonCyan,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onComplete() }
+
+            // Animated "game footage" placeholder
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Pulsing game icon
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 0.9f,
+                    targetValue = 1.1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800, easing = EaseInOutCubic),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulse"
                 )
-            } else {
+
+                Box(
+                    modifier = Modifier
+                        .size((80 * pulseScale).dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(ad.accentColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = ad.title.take(1),
+                        color = Color.White,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 Text(
-                    text = "Closes in ${countdown}s",
-                    color = TextMuted,
-                    fontSize = 12.sp
+                    text = ad.title,
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = ad.subtitle,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // CTA button
+                Button(
+                    onClick = { /* fake — does nothing */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = ad.accentColor),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Text(
+                        text = ad.ctaText,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
 
-        // Ad card
-        Card(
+        // Top bar with countdown / close
+        Row(
             modifier = Modifier
-                .align(Alignment.Center)
-                .padding(32.dp)
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
-            ) {
-                Text(
-                    text = "Sponsored",
-                    color = Color.Gray,
-                    fontSize = 10.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = ad.headline,
-                    color = Color.Black,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = ad.body,
-                    color = Color.DarkGray,
-                    fontSize = 14.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = ad.url,
-                    color = Color(0xFF1A73E8),
-                    fontSize = 12.sp
-                )
+            Text("Ad", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+
+            if (canClose) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f))
+                        .clickable { onComplete() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("✕", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("$remainingSeconds", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                }
             }
+        }
+
+        // Bottom progress bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .align(Alignment.BottomCenter)
+                .background(Color.White.copy(alpha = 0.1f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(progress)
+                    .background(ad.accentColor)
+            )
         }
     }
 }
