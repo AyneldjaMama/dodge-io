@@ -15,16 +15,17 @@ class AdMobManager(private val activity: Activity) {
     companion object {
         private const val TAG = "AdMobManager"
 
-        // false = simulated text ads only, true = real Google ads (test unit in debug, prod unit in release)
+        // false = simulated text ads only, true = real Google ads
         const val USE_REAL_ADS = true
 
-        // Google test rewarded ad unit
+        // Google test rewarded ad unit (always used until you have a real ad unit)
         private const val TEST_AD_UNIT = "ca-app-pub-3940256099942544/5224354917"
 
-        // Replace with your real ad unit ID for production
+        // Replace with your real ad unit ID for production, then set IS_PRODUCTION = true
         private const val PROD_AD_UNIT = "ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX"
+        private const val IS_PRODUCTION = false
 
-        private val AD_UNIT_ID = if (USE_REAL_ADS) PROD_AD_UNIT else TEST_AD_UNIT
+        private val AD_UNIT_ID = if (IS_PRODUCTION) PROD_AD_UNIT else TEST_AD_UNIT
     }
 
     private var rewardedAd: RewardedAd? = null

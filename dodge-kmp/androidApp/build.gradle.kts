@@ -13,7 +13,7 @@ android {
         applicationId = "io.dodge.game"
         minSdk = 24
         targetSdk = 35
-        versionCode = 16
+        versionCode = 17
         versionName = "2.0.0"
     }
 
