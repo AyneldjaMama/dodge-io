@@ -311,9 +311,8 @@ class GameEngine(
         }
 
         // Handle hit
-        if (hit && !shieldActive) {
-            killPlayer(events)
-        } else if (hit && shieldActive) {
+        if (hit && shieldActive) {
+            // Shield absorbs the hit
             events.add(GameEvent.PlaySound(SoundEffect.SHIELD_BREAK))
             events.add(GameEvent.ShieldBreak)
             shieldActive = false
@@ -339,6 +338,9 @@ class GameEngine(
             particleSystem.spawnParticles(player.x, player.y, GameColors.NEON_CYAN, 40, 6f) { rng() }
             comboText = "SHIELD BREAK!"
             comboTimer = 60
+        } else if (hit) {
+            // No shield — player dies
+            killPlayer(events)
         }
 
         // === RENDER: Trail ===
